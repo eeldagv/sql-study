@@ -57,8 +57,11 @@ ORDER BY USER_ID ASC, PRODUCT_ID DESC;
 -- =====================
 -- 3. 업그레이드 된 아이템 구하기
 -- =====================
--- 문제: 
--- 내 생각: 
+-- 문제: 아이템의 희귀도가 'RARE'인 아이템들의 모든 다음 업그레이드 아이템의 아이템 ID(ITEM_ID), 아이템 명(ITEM_NAME), 아이템의 희귀도(RARITY)를 출력하는 SQL 문을 작성해 주세요. 이때 결과는 아이템 ID를 기준으로 내림차순 정렬주세요.
+-- 아이템 정보 ITEM_INFO : ITEM_ID 아이템 ID, ITEM_NAME 아이템명, RARITY 희귀도, PRICE 가격
+-- 아이템 관계 ITEM_TREE : ITEM_ID 아이템 ID, PARENT_ITEM_ID PARENT 아이템의 ID
+-- 단, 각 아이템들은 오직 하나의 PARENT 아이템 ID를 가지며, ROOT 아이템의 PARENT 아이템 ID는 NULL 입니다. ROOT 아이템이 없는 경우는 존재하지 않습니다.
+-- 내 생각: (1)희귀도가 RARE인 아이템 (2)모든 다음 업그레이드 아이템 (3)아이템 id, 아이템명, 희귀도를 출력 (3)아이템 id 기준 내림차순 정렬
 
 
 

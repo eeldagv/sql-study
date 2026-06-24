@@ -106,9 +106,55 @@ FROM FIRST_HALF
 JOIN ICECREAM_INFO ON FIRST_HALF.FLAVOR = ICECREAM_INFO.FLAVOR
 WHERE FIRST_HALF.TOTAL_ORDER > 3000 AND ICECREAM_INFO.INGREDIENT_TYPE = 'fruit_based'
 ORDER BY FIRST_HALF.TOTAL_ORDER DESC;
+-- 또는
+SELECT FLAVOR
+FROM FIRST_HALF
+WHERE TOTAL_ORDER > 3000 AND FLAVOR IN (SELECT FLAVOR FROM ICECREAM_INFO WHERE INGREDIENT_TYPE = 'fruit_based')
+ORDER BY TOTAL_ORDER DESC;
 
 -- 배운 것: 테이블 두 개 이상을 붙일 때는 JOIN을 쓴다. JOIN ON은 '어떤 테이블을 어떤 기준으로 붙인다' 로 해석하면 좋다. 
 
+-- *********************
+-- 서브쿼리와 JOIN
+-- *********************
+-- 서브쿼리란 '쿼리 안에 들어있는 또 다른 쿼리'를 말한다. 
+-- 예를 들어, '친구들 중 철수보다 용돈을 더 많이 받는 사람 구하기' 라고 하면,
+-- 1단계 : 철수의 용돈은 얼마인지 구한다 -> 서브쿼리
+-- 2단계 : 그 돈보다 더 받는 사람을 구한다 -> 메인쿼리
+
+SELECT 이름
+FROM 친구들
+WHERE 용돈 > (SELECT 용돈 FROM 친구들 WHERE 이름 = '철수');
+
+-- 이 때 괄호 안에 있는 것이 서브쿼리이고, 이를 먼저 계산한 후 메인쿼리가 동작한다.
+
+SELECT 이름
+FROM 친구들
+WHERE 용돈 > 5만원;
+
+-- JOIN은 2개 이상의 테이블을 비교할 때 사용한다.
+-- 예를 들어, '학생 테이블과 반 테이블을 비교해서 담임이 김선생인 학생'을 추출한다고 하면,
+
+-- 학생 테이블
+| ID | 이름 | 반_ID |
+| 1 | 김철수 | 101 |
+| 2 | 이영희 | 101 | 
+| 3 | 박민준 | 102 |
+
+-- 반 테이블
+| 반_ID | 반이름 | 담임 |
+| 101 | 1학년 3반 | 김선생 |
+| 102 | 1학년 4반 | 박선생 |
+
+SELECT 이름
+FROM 학생
+JOIN 반 ON 학생.반_ID = 반.반_ID
+WHERE 반.담임 = '김선생';
+
+-- 두 테이블에서 값이 같은 행을 짝지어서 연결한 뒤 비교한다. 이 때 ON은 어떤 테이블을 어디에 어떻게 연결하는지 접착제와 같은 역할을 하고, .은 어느 테이블의 컬럼인지를 명시하는 역할을 한다. 
+
+-- 서브쿼리 : 결과 컬럼이 한 테이블에서만 필요 + 조건 확인용으로 잠깐 빌려올 때
+-- JOIN : 테이블을 나란히 붙여서 같이 볼 때
 
 
 -- =====================
@@ -129,8 +175,15 @@ SELECT DR_NAME, DR_ID, MCDP_CD, DATE_FORMAT(HIRE_YMD, '%Y-%m-%d') AS HIRE_YMD
 FROM DOCTOR
 WHERE MCDP_CD = 'CS' OR MCDP_CD = 'GS'
 ORDER BY HIRE_YMD DESC, DR_NAME ASC;
+-- 또는
+SELECT DR_NAME, DR_ID, MCDP_CD, HIRE_YMD
+FROM DOCTOR
+WHERE MCDP_CD IN ('CS', 'GS')
+ORDER BY HIRE_YMD DESC, DR_NAME;
 
 -- 배운 것: 문제를 잘 읽자. 
+-- (+)6/24 추가:
+-- 조건이 둘 중 하나라도 맞는 것이 허용된다면 굳이 OR을 쓰지 않고 IN 을 사용하면 훨씬 효울적으로 작성할 수 있다. 또한 오름차순은 디폴트라서 ASC는 생략할 수 있다.
 
 
 
@@ -157,6 +210,9 @@ WHERE YEAR(USED_GOODS_BOARD.CREATED_DATE) = 2022 AND MONTH(USED_GOODS_BOARD.CREA
 ORDER BY USED_GOODS_REPLY.CREATED_DATE ASC, USED_GOODS_BOARD.TITLE ASC;
 
 -- 배운 것: ON 조건은 두 테이블을 연결하는 공통 컬럼이다. 조건을 빼먹지 말자.
+-- (+)6/24 추가:
+-- INNER JOIN/LEFT JOIN 시에 기준 테이블이 되는 FROM에는 하나의 테이블만 올 수 있고, JOIN으로 나머지를 이어 붙인다.
+
 
 
 
@@ -376,6 +432,7 @@ FROM FISH_INFO
 WHERE LENGTH IS NULL;
 
 -- 배운 것: IS NULL = 값이 NULL인 것만 / IS NOT NULL = 값이 NULL이 아닌 것만 / IFNULL(data, '대체값') = data가 NULL일 경우 대체값으로 출력
+-- (+)6/24 추가 : NULL은 절대 비교연산자로 찾을 수 없다. 
 
 
 
@@ -413,3 +470,49 @@ FROM ECOLI_DATA
 WHERE GENOTYPE & 2 = 0 AND (GENOTYPE & 1 != 0 OR GENOTYPE & 4 != 0);
 
 -- 배운 것: '&'는 '이 자리에 체크가 됐는지' 확인하는 비트 연산자이다... 근데 개념이 너무 어려워서 따로 찾아볼 것!
+
+-- (+)6/24 추가:
+-- '분화', '부모 개체', '자식 개체' 라는 단어에 얽매이지 X, 그냥 테이블을 소개하는 배경 설명
+
+-- GENOTYPE은 '이 대장균이 어떤 형질(특징)을 가졌는지'를 숫자 하나로 표현한 것이다. 이를 이해하기 위해 체크박스를 활용한다.
+[ 4번 ] [ 3번 ] [ 2번 ] [ 1번 ]
+-- 형질 번호가 1, 2, 3, 4번까지 있으므로 체크박스가 4칸이며, 어떤 형질을 가졌는지는 체크 여부로 표현 
+-- 문제에서 각 대장균 별 형질을 2진수로 나타냈을 때, ID 2가 1111, 즉 4자리이므로 '형질이 적어도 4번까지는 있겠다' 라고 추측할 수 있고, 각 대장균 별 보유한 형질이 ID 2 : 1, 2, 3, 4 라고 했으므로 형질 번호가 최소 1번부터 4번까지 존재한다는 걸 확인할 수 있다.
+-- 1 : 체크됨 / 0 : 체크 안 됨
+
+-- 10진수 형태로 저장되어 있는 GENOTYPE을 2진수로 변환하면 체크박스가 보인다.
+-- 예를 들어 ID 1의 GENOTYPE은 8이고, 8을 2로 나누기를 반복했을 때:
+-- 8 / 2 = 4 ... 나머지 0
+-- 4 / 2 = 2 ... 나머지 0
+-- 2 / 2 = 1 ... 나머지 0
+-- 1 / 2 = 0 ... 나머지 1
+-- 이 나머지를 아래부터 위로 읽으면 1000
+[ 1 ] [ 0 ] [ 0 ] [ 0 ]
+-- 4번 자리만 체크되어 있으므로, ID 1d은 4번 형질만 가진다.
+
+-- 이런 식으로 GENOTYPE을 2진수로 변환하여 보유 형질을 정리한 것이
+-- ID 1 : 4
+-- ID 2 : 1, 2, 3, 4
+-- ID 3 : 1
+-- ID 4 : 1, 3, 4
+
+-- 문제에서 제시한 조건이 '2번 형질을 보유하지 않으면서, 1번이나 3번 형질을 보유하고 있는 대장균 개체의 수' 이므로, 2번 형질을 보유하고 있는 ID 2 제외 -> 1번 혹은 3번 형질을 포함하고 있지 않은 ID 1도 제외, 정답은 ID 3, ID 4 총 2개가 나와야 한다.
+
+-- SQL문에서는 일일이 2진수로 바꾸어 체크박스를 확인할 수 없으므로, 비트 연산자인 '&'를 사용한다. 즉 비트 연산자 & = "이 자리에 체크 됐어?"
+-- 1번 자리 확인 -> & 1
+-- 2번 자리 확인 -> & 2
+-- GENOTYPE & 2 = 0 -> '2번 형질 없음' 확인
+-- GENOTYPE & 1 != 0 -> '1번 형질 있음' 확인
+
+-- 헷갈리지 말 것: 비트 연산자 자체는 숫자를 반환한다. & 연산자 = '이 자리에 뭐가 있는지 꺼내봐라.' -> 꺼낸 값: 숫자
+-- 그 뒤의 != 0, 이 판단이 참/거짓을 반환하는 것
+-- 또한 자릿수(인덱스)는 무조건 0부터 시작한다.
+-- 4번 형질 자리 -> 인덱스 0
+-- 3번 형질 자리 -> 인덱스 1 
+
+-- 여기까지 이해하고 다시 문제를 풀었을 때
+-- 오답:
+SELECT COUNT(*) AS COUNT
+FROM ECOLI_DATA
+WHERE GENOTYPE & 2 = 0 AND 1 IN (GENOTYPE & 1, GENOTYPE & 3);
+-- 코드 실행하면 테스트 성공하는데, 왜 제출 후 채점하면 오답이라고 뜨지...

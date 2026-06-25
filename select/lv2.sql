@@ -27,6 +27,11 @@ ORDER BY MEMBER_ID;
 
 -- 배운 것: 제발 문제를 잘 읽 자. 조건을 잘 확인하자.
 
+-- (+)6/25 추가: 문제에 주어진 날짜 컬럼의 값도 0000-00-00 형태이고, 추출해도 0000-00-00 형태로 나오는데, 왜 데이트 포맷 함수를 적용해야 하는가?
+-- 화면에 보이는 것과 실제 데이터 타입은 다를 수 있다. DATE_OF_BIRTH 컬럼은 DB에 DATE 타입으로 저장되어 있다. 화면에 0000-00-00처럼 보여도 DATE라는 타입의 값이다.
+-- DATE 타입은 DB나 클라이언트(브라우저, 프로그램)에 따라 표시 형식이 미묘하게 다를 수 있는데, ex) 2022-1-11 혹은 시간까지 붙어서 0000-00-00 00:00:00
+-- 따라서 그대로 추출하는 게 아니라 string 타입으로 명시적으로 포맷하면 항상 똑같은 형태로 고정되기 위함이다.
+
 
 
 -- =====================
@@ -52,6 +57,23 @@ ORDER BY USER_ID ASC, PRODUCT_ID DESC;
 
 -- 배운 것: GROUP BY는 '유형별'로 개수를 알고 싶을 때 컬럼을 그룹화 하는 데 사용하고 HAVING은 그룹화 된 컬럼에 조건을 걸 때 사용한다.
 
+-- (+)6/25 추가:
+-- 다시 풀었을 때 답을
+SELECT USER_ID, PRODUCT_ID
+FROM ONLINE_SALE
+GROUP BY USER_ID, PRODUCT_ID
+HAVING COUNT(USER_ID = PRODUCT_ID) >= 2
+ORDER BY USER_ID, PRODUCT_ID DESC;
+-- 라고 적었는데, 운 좋게 통과는 됐지만 HAVING 조건이 틀리다.
+-- GROUP BY에서 그룹화 된 순간 DB가 이미 해당 묶음 개수를 알고 있기 때문
+-- 따라서
+-- 정답:
+SELECT USER_ID, PRODUCT_ID
+FROM ONLINE_SALE
+GROUP BY USER_ID, PRODUCT_ID
+HAVING COUNT(*) >= 2
+ORDER BY USER_ID, PRODUCT_ID DESC
+
 
 
 -- =====================
@@ -60,19 +82,57 @@ ORDER BY USER_ID ASC, PRODUCT_ID DESC;
 -- 문제: 아이템의 희귀도가 'RARE'인 아이템들의 모든 다음 업그레이드 아이템의 아이템 ID(ITEM_ID), 아이템 명(ITEM_NAME), 아이템의 희귀도(RARITY)를 출력하는 SQL 문을 작성해 주세요. 이때 결과는 아이템 ID를 기준으로 내림차순 정렬주세요.
 -- 아이템 정보 ITEM_INFO : ITEM_ID 아이템 ID, ITEM_NAME 아이템명, RARITY 희귀도, PRICE 가격
 -- 아이템 관계 ITEM_TREE : ITEM_ID 아이템 ID, PARENT_ITEM_ID PARENT 아이템의 ID
+-- ITEM_A -> ITEM_B 와 같이 업그레이드 가능할 때, ITEM_A를 ITEM_B의 PARENT ITEM이라 하고, PARENT 아이템이 없는 아이템을 ROOT 아이템이라고 함
+-- 예를 들어, ITEM_A -> ITEM_B -> ITEM_C 와 같이 업그레이드가 가능하다면, ITEM_C의 PARENT 아이템은 ITEM_B, ITEM_B의 PARENT 아이템은 ITEM_A, ROOT 아이템은 ITME_A
 -- 단, 각 아이템들은 오직 하나의 PARENT 아이템 ID를 가지며, ROOT 아이템의 PARENT 아이템 ID는 NULL 입니다. ROOT 아이템이 없는 경우는 존재하지 않습니다.
--- 내 생각: (1)희귀도가 RARE인 아이템 (2)모든 다음 업그레이드 아이템 (3)아이템 id, 아이템명, 희귀도를 출력 (3)아이템 id 기준 내림차순 정렬
+-- RARE : A -> B, C / B -> D, E / D, E -> 업그레이드 불가능
+
+-- 내 생각:
+-- (1) ITEM_TREE 테이블은 바꿔 말하면,
+-- PARENT_ITEM_ID = 0 = ITEM_A -> PARENT_ITEM_ID = 1 = B / PARENT_ITEM_ID = 2 = C 로 업그레이드 가능
+-- PARENT_ITEM_ID = 1 = ITEM_B -> PARENT_ITEM_ID = 3 = D / PARENT_ITEM_ID = 4 = E 로 업그레이드 가능
+-- (2) RARITY가 RARE인 ITEM_NAME : ITEM_A, ITEM_B, ITEM_D, ITEM_E = ITEM_ID : 0, 1, 3, 4
+-- (3) 0 -> 1, 2 가능 / 1 -> 3, 4 가능 / 3, 4 -> 불가능
+-- (4) 따라서 ITEM_ID가 1, 2, 3, 4 인 행들의 값을 ITME_ID 기준 내림차순 정렬
+
+-- HINT:
+-- (1) RARE인 아이템의 ID 목록을 구한다 -> ITEM_INFO에서
+-- (2) ITEM_TREE에서 PARENT_ITEM_ID가 그 목록에 있는 행을 찾는다 -> 그게 '자식'
+-- (3) 그 자식들의  ITME_ID로 ITEM_INFO에서 이름, 희귀도를 가져온다
+
+-- '희귀도가 RARE인 아이템들의 모든 다음 업그레이드 아이템' = '희귀도가 RARE인 아이템들의 모든 자식 아이템'의 어쩌구를 구하기
+-- 희귀도가 RARE인 아이템 <- ITEM_INFO 의 자식 아이템을 구하려면?
+-- 자식과 부모 관계를 나타내는 ITEM_TREE 를 통해서 구하면 됨
+-- 즉, ITEM_INFO로 구한 희귀도가 RARE인 아이템은 곧 부모 아이템이 되는 거니까
+-- ITEM_INFO로 구한 희귀도가 RARE인 아이템 = ITEM_TREE의 PARENT_ITEM_ID
+-- 짝지어서 각각의 ITEM_ID = 자식을 구하기
+-- 그 자식들로 id, 이름, 희귀도 뽑기 <- ITEM_INFO로, 최종 결과물
+
+-- 정답:
+SELECT CHILD.ITEM_ID, CHILD.ITEM_NAME, CHILD.RARITY
+FROM ITEM_INFO AS PARENT
+JOIN ITEM_TREE ON PARENT.ITEM_ID = ITEM_TREE.PARENT_ITEM_ID
+JOIN ITEM_INFO AS CHILD ON ITEM_TREE.ITEM_ID = CHILD.ITEM_ID
+WHERE PARENT.RARITY = 'RARE'
+ORDER BY ITEM_ID DESC;
+-- 설명:
+-- (1) ITEM_INFO 테이블에서, WHERE로 희귀도가 RARE인 아이템을 걸러낸다.
+-- (2) 희귀도가 RARE인 아이템들의 모든 다음 업그레이드 아이템 = 희귀도가 RARE인 아이템들의 모든 자식 아이템 이라는 뜻이다. 즉, '희귀도가 RARE인 아이템'은 부모 아이템이 된다. 따라서 '희귀도가 RARE'인 기준으로 걸러진 ITEM_INFO 테이블에 PARENT라는 별명을 붙인다.
+-- (3) '희귀도가 RARE인 아이템'의 ITEM_ID는 각각 0, 1, 3, 4이다. 이 ID의 자식이 되는 ITEM_ID를 찾기 위해 부모-자식 관계를 나타나내는 ITEM_TREE 테이블을 가져와 붙인다.
+-- (4) PARENT 테이블의 ITEM_ID는 말 그대로 부모의 아이템 ID이므로, ITEM_TREE 테이블의 PARENT_ITEM_ID 와 일치하는 값끼리 연결하여 붙인다. 이 과정에서, ITEM_ID가 3과 4인 것은 업그레이드가 불가하므로 자연스럽게 걸러진다.
+-- (5) 이 자식 아이템 ID의 정보를 가져오기 위해서는 다시 가장 처음의 ITEM_INFO 테이블을 붙여주어야 한다. 이 때, PARENT 테이블과 구분하기 위해 이 테이블에는 CHILD 라는 별명을 붙여준다.
+-- (6) 자식 아이템 ID를 나타내는 컬럼은 ITEM_TREE.ITEM_ID 이므로, CHILD를 JOIN 할 때 해당 값과 CHILD.ITEM_ID 를 짝지어 연결시킨다. 
+-- (7) 가져와야 하는 컬럼은 JOIN한 상태에서, CHILD 테이블의 것이므로 CHILD.ITEM_ID, CHILD.ITEM_NAME, CHILD.RARITY 가 된다.
 
 
-
--- 배운 것: 
+-- 배운 것: 쿼리를 쓸 때는 무조건 SELECT부터 쓰는 게 아니라 먼저 테이블 관계를 파악해야 한다. 무엇에서 시작해서, 어떻게 연결해서, 무엇을 구하는지의 흐름을 먼저 그려보고 그 흐름에 SQL절을 매칭한다. 
 
 
 
 -- =====================
 -- 4. 조건에 맞는 개발자 찾기
 -- =====================
--- 문제: 
+-- 문제: DEVELOPERS 테이블에서 Python이나 C# 스킬을 가진 개발자의 정보를 조회하려 합니다. 조건에 맞는 개발자의 ID, 이메일, 이름, 성을 조회하는 SQL 문을 작성해 주세요. 결과는 ID를 기준으로 오름차순 정렬해 주세요.
 -- 내 생각: 
 
 

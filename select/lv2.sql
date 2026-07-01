@@ -133,31 +133,85 @@ ORDER BY ITEM_ID DESC;
 -- 4. 조건에 맞는 개발자 찾기
 -- =====================
 -- 문제: DEVELOPERS 테이블에서 Python이나 C# 스킬을 가진 개발자의 정보를 조회하려 합니다. 조건에 맞는 개발자의 ID, 이메일, 이름, 성을 조회하는 SQL 문을 작성해 주세요. 결과는 ID를 기준으로 오름차순 정렬해 주세요.
+-- SKILLCODES 테이블 : NAME 스킬의 이름, CATEGORY 스킬의 범주, CODE 스킬의 코드
+-- DEVELOPERS 테이블 : ID 개발자의 아이디, FIRST_NAME 이름, LAST_NAME 성, EMAIL 이메일, SKILL_CODE 스킬 코드
+-- 예를 들어 어떤 개발자의 SKILL_CODE가 400 (=b'110010000')이라면, 이는 SKILLCODE 테이블에서 CODE가 256 (=b'100000000'), 128 (=b'10000000'), 16 (=b'10000')에 해당하는 스킬을 가졌다는 것을 의미합니다.
+-- SKILL_CODE가 8452 = 8192 + 256 + 4 -> Vue, Python, Cpp
+-- SKILL_CODE가 1024 -> C#
+-- SKILL_CODE가 400 = 256 + 128 + 16 -> Python, Java, JavaScript
+
 -- 내 생각: 
+-- (1) DEVELOPERS 테이블에서 스킬이 Python 혹은 C# 기준으로 걸러야 하는데, 해당 테이블에는 스킬 이름이 아닌 스킬 코드만 있기 때문에, SKILLCODES 테이블을 JOIN 해야함
+-- (2) DEVELOPERS 테이블에서 SKILL_CODE는 보유하고 있는 각각의 스킬 CODE를 합한 값으로 표현되어 있음
+-- (3) SKILLCODES 테이블에서 각 스킬의 CODE는 2의 거듭제곱 형태로 표현되어 있음
+-- (4) 각 테이블의 CODE 컬럼과 SKILL_CODE 컬럼을 이용해서 JOIN SKILLCODE on DEVELOPERS 해야 할 것 같은데, SKILL_CODE 가 CODE 컬럼 행들의 합이라는 걸 어떻게 작성할 것인가 
+-- (5) SKILLCODES 테이블을 DEVELOPERS 테이블에 연결할 때, 비트 연산을 이용해서 DEVELOPERS 테이블의 SKILL_CODE 값에, SKILLCODES 테이블의 각 CODE가 자리에 있는지를 체크하여 0이 아닌 것끼리 (= 0이 아니면 해당 자리에 값이 있다는 뜻) 연결함
 
+-- 오답:
+SELECT DEVELOPERS.ID, DEVELOPERS.EMAIL, DEVELOPERS.FIRST_NAME, DEVELOPERS.LAST_NAME
+FROM DEVELOPERS
+JOIN SKILLCODES ON DEVELOPERS.SKILL_CODE & SKILLCODES.CODE != 0
+WHERE SKILLCODES.NAME IN ('Python', 'C#')
+ORDER BY DEVELOPERS.ID;
+-- 틀린 이유: 파이썬 '또는' C# <- 이라는 조건 때문에 중복 행이 발생할 수 있다. 
 
+-- 정답:
+SELECT DISTINCT DEVELOPERS.ID, DEVELOPERS.EMAIL, DEVELOPERS.FIRST_NAME, DEVELOPERS.LAST_NAME
+FROM DEVELOPERS
+JOIN SKILLCODES ON DEVELOPERS.SKILL_CODE & SKILLCODES.CODE != 0
+WHERE SKILLCODES.NAME IN ('Python', 'C#')
+ORDER BY DEVELOPERS.ID;
 
 -- 배운 것: 
-
+-- (1) & 연산은 '이 자리가 켜져 있냐', '이 자리에 값이 있냐'를 확인하는 것이고, 결과가 0이면 없음, 0이 아니면 있음이라는 뜻이다. ON이나 WHERE에 쓸 수 있다.
+-- (2) 중복된 행을 제거할 때는 DISTINCT를 사용하고, SELECT 바로 뒤에 붙여준다.
 
 
 -- =====================
 -- 5. 특정 물고기를 잡은 총 수 구하기
 -- =====================
--- 문제: 
--- 내 생각: 
+-- 문제: FISH_INFO 테이블에서 잡은 BASS와 SNAPPER의 수를 출력하는 SQL문을 작성해주세요. 컬럼명은 'FISH_COUNT'로 해주세요.
+-- FISH_INFO 테이블 : ID 물고기 아이디, FISH_TYPE 물고기 종류(숫자), LENGTH 물고기 길이, TIME 잡은 날짜 -> 잡은 물고기들의 정보
+-- 단, 잡은 물고기의 길이가 10cm 이하일 경우에는 LENGTH가 NULL이며, NULL만 있는 경우는 없음
+-- FISH_NAME_INFO 테이블 : FISH_TYPE 물고기의 종류(숫자), FISH_NAME 물고기의 이름(문자) -> 물고기의 이름에 대한 정보
+-- 내 생각:
+-- (1) 물고기 길이, 잡은 날짜는 중요한 정보가 아님
+-- (2) 각 테이블에서 공통된 컬럼인 FISH_TYPE(숫자)로 두 테이블을 JOIN
+-- (3) COUNT를 사용하여 FISH_NAME이 BASS, SNAPPER 인 것을 세기  
 
+-- 정답:
+SELECT COUNT(*) AS FISH_COUNT
+FROM FISH_INFO
+JOIN FISH_NAME_INFO ON FISH_INFO.FISH_TYPE = FISH_NAME_INFO.FISH_TYPE
+WHERE FISH_NAME_INFO.FISH_NAME IN ('BASS', 'SNAPPER');
 
+-- 정답2:
+SELECT COUNT(*) AS FISH_COUNT
+FROM FISH_INFO
+WHERE FISH_TYPE IN (
+    SELECT FISH_TYPE
+    FROM FISH_NAME_INFO
+    WHERE FISH_NAME IN ('BASS', 'SNAPPER')
+);
+-- 해당 문제처럼 다른 테이블의 컬럼이 빌려오는 용도로만 사용된다면 서브쿼리를 사용하는 것이 훨씬 간단하고 직관적이다.
 
--- 배운 것: 
+-- 배운 것: WHERE는 JOIN ON 다음에 써야함!! SQL 작성 순서를 헷갈리지 말자.
 
 
 
 -- =====================
 -- 6. 부모의 형질을 모두 가지는 대장균 찾기
 -- =====================
--- 문제: 
+-- 문제: 부모의 형질을 모두 보유한 대장균의 ID(ID), 대장균의 형질(GENOTYPE), 부모 대장균의 형질(PARENT_GENOTYPE)을 출력하는 SQL문을 작성해주세요. 이때 결과는 ID에 대해 오름차순 정렬해주세요.
+-- ECOLI_DATA 테이블 : ID 대장균 개체의 ID, PARENT_ID 부모 개체의 ID, SIZE_OF_COLONY 개체의 크기, DIFFERENTIATION_DATE 분화되어 나온 날짜, GENOTYPE 개체의 형질
+-- 부모 개체 : 분화를 시작한 개체 / 자식 개체 : 분화되어 나온 개체
+-- 최초 대장균 개체의 PARENT_ID는 NULL
+
 -- 내 생각: 
+-- (1) 여기에서 개체의 크기, 날짜는 중요한 컬럼이 아님
+-- (2) '부모의 형질'을 보유해야 하므로 ID 1은 포함될 수 없음
+-- (3) ID 2는 1번 형질을 보유하고 있고, 부모인 ID 1은 1번 형질을 보유하고 있으므로, ID 2의 부모 형질을 보유하고 있다.
+-- ID 3은 3번 형질을 보유하고 있고, 부모인 ID 1은 1번 형질을 보유하고 
 
 
 

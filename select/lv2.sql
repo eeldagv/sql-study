@@ -210,9 +210,24 @@ WHERE FISH_TYPE IN (
 -- 내 생각: 
 -- (1) 여기에서 개체의 크기, 날짜는 중요한 컬럼이 아님
 -- (2) '부모의 형질'을 보유해야 하므로 ID 1은 포함될 수 없음
--- (3) ID 2는 1번 형질을 보유하고 있고, 부모인 ID 1은 1번 형질을 보유하고 있으므로, ID 2의 부모 형질을 보유하고 있다.
--- ID 3은 3번 형질을 보유하고 있고, 부모인 ID 1은 1번 형질을 보유하고 
+-- (3) GENOTYPE 컬럼에 있는 값들을 2진수로 표현하면 각각 몇번 형질을 보유하고 있는지 알 수 있음
+-- (4) 예를 들어, ID 4는 2번 형질만을 보유하고 있고, ID 4의 부모인 ID 2는 1번 형질만 보유하고 있으므로 ID 4는 부모 형질을 보유하고 있지 않다. 반대로, ID 8은 1, 3, 4번 형질을 보유하고 있고, 부모인 ID 6도 1, 3번 형질을 보유하고 있으므로 ID 8은 부모 형질을 보유하고 있다.
+--(5) JOIN을 이용해서 테이블을 한 번 더 연결한다. 
 
+-- 오답:
+SELECT CHILD.ID, CHILD.GENOTYPE, PARENT.GENOTYPE AS PARENT_GENOTYPE
+FROM ECOLI_DATA AS CHILD
+JOIN ECOLI_DATA AS PARENT ON CHILD.PARENT_ID = PARENT.ID
+WHERE PARENT.GENOTYPE & CHILD.GENOTYPE != 0
+ORDER BY CHILD.ID;
+-- 틀린 이유: 지금 조건은 '공통으로 가진 형질이 하나라도 있으면' 통과가 가능해서, ID 6 행도 추출되고 있다. 여기서의 조건은 부모의 형질을 '모두' 갖고 있어야 한다는 것이다. 따라서 조건을 수정해야 한다.
 
+-- 정답:
+SELECT CHILD.ID, CHILD.GENOTYPE, PARENT.GENOTYPE AS PARENT_GENOTYPE
+FROM ECOLI_DATA AS CHILD
+JOIN ECOLI_DATA AS PARENT ON CHILD.PARENT_ID = PARENT.ID
+WHERE PARENT.GENOTYPE & CHILD.GENOTYPE = PARENT.GENOTYPE
+ORDER BY CHILD.ID;
+-- 형질을 '모두' 갖고 있어야 하므로 완전히 일치해야 한다.
 
--- 배운 것: 
+-- 배운 것: 이런 대장균, 형질, 개체 문제 나온다고 쫄거나 너무 복잡하게 생각하지 말고 우선 먼저 & 연산을 떠올려 생각해 볼 것. 

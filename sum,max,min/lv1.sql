@@ -5,6 +5,7 @@
 -- PRODUCT 테이블 : PRODUCT_ID 상품 ID, PROUCT_CODE 상품코드, PRICE 판매가
 -- 내 생각: 상품 ID, 상품가는 중요하지 않으므로 신경쓰지 않고, PRICE 컬럼에서 MAX를 통해 가격의 최대값을 출력한다.
 
+-- 정답:
 SELECT MAX(PRICE) AS MAX_PRICE
 FROM PRODUCT;
 
@@ -19,6 +20,7 @@ FROM PRODUCT;
 -- ANIMAL_INS 테이블 = 동물 보호소에 들어온 동물의 정보 : ANIMAL_ID 동물의 아이디, ANIMAL_TYPE 생물 종, DATETIME 보호 시작일, INTAKE_CONDITION 보호 시작 시 상태, NAME 이름, SEX_UPON_INTAKE 성별 및 중성화 여부
 -- 내 생각: 가장 최근에 들어온 동물이 '언제' 들어왔는지만 조회하면 되므로 DATETIME 외의 컬럼들은 신경쓰지 않음. 데이트 포맷에 대한 조건은 따로 없기 때문에 DATE 만 사용해도 될 듯.
 
+-- 정답:
 SELECT MAX(DATETIME) AS 시간
 FROM ANIMAL_INS;
 

@@ -10,8 +10,8 @@
 | SELECT | 27 / 33 |
 | SUM, MAX, MIN | 10 / 10 |
 | GROUP BY | 18 / 24 |
-| JOIN | 7 / 12 |
-| IS NULL | 0 / 8 |
+| JOIN | 5 / 12 |
+| IS NULL | 7 / 8 |
 | String, Date | 0 / 19 |
 
 ## 사용 언어
